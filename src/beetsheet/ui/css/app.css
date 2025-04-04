@@ -1,0 +1,168 @@
+/* Main app styles */
+BeetsheetApp {
+    background: $surface;
+}
+
+/* Ensure the command palette is visible when opened with ^P */
+Screen#textual-command-palette {
+    width: 80%;
+    height: 60%;
+    border: tall $accent;
+    background: $surface;
+    padding: 1;
+    /* Use highest z-index layer */
+    layer: overlay;
+    /* Center on screen */
+    align: center middle;
+    /* Add solid background behind it */
+    background: $surface;
+}
+
+/* Make the command input stand out */
+Screen#textual-command-palette Input {
+    margin: 1 0;
+    border: tall $primary;
+    background: $surface;
+    color: $text;
+}
+
+/* Make command results very visible */
+Screen#textual-command-palette #commands {
+    height: auto;
+    max-height: 20;
+    background: $surface;
+    color: $text;
+    border: solid $primary;
+    margin-top: 1;
+}
+
+/* Style command items */
+Screen#textual-command-palette .command-list--command {
+    background: $boost;
+    color: $text;
+    padding: 1;
+    margin: 0 0 1 0;
+}
+
+/* Style selected command */
+Screen#textual-command-palette .command-list--command.-selected {
+    background: $accent;
+    color: $text;
+}
+
+/* Footer styling to ensure proper layering */
+Footer {
+    layer: footer;
+    dock: bottom;
+    height: 1;
+}
+
+/* Main application styling */
+DataTable {
+    height: 1fr;
+    width: 1fr;
+    border: tall $panel;
+}
+
+/* Make the status column narrow */
+.datatable--header-0,
+.datatable--column-0 {
+    width: 5;
+    content-align: center middle;
+    color: $warning; /* Make the asterisk stand out */
+}
+
+/* Make the file column wider */
+.datatable--header-1,
+.datatable--column-1 {
+    width: 25%;
+}
+
+/* Style for editing cell */
+Edit {
+    background: $boost;
+    color: $text-muted;
+    border: none;
+    padding: 0 1;
+}
+
+Edit:focus {
+    border: tall $accent;
+    background: $panel;
+    color: $text;
+}
+
+/* Style for the currently highlighted row */
+DataTable > .datatable--highlight {
+    background: $accent-darken-3;
+}
+
+/* Style for data cells */
+DataTable > .datatable--cursor {
+    background: $accent-darken-2;
+}
+
+/* Styles for bulk edit screen */
+BulkEditScreen {
+    align: center middle;
+    background: $background 50%;
+}
+
+#bulk-edit-container {
+    width: 80%;
+    height: auto;
+    min-height: 15;
+    max-height: 80%;
+    background: $surface;
+    border: tall $primary;
+    padding: 1 2;
+}
+
+#title {
+    text-align: center;
+    padding: 1;
+    text-style: bold;
+    color: $text;
+    background: $primary-darken-1;
+}
+
+#current-values {
+    height: auto;
+    max-height: 10;
+    overflow-y: scroll;
+    margin: 1 0;
+    border: solid $primary-darken-2;
+}
+
+.value-item {
+    padding: 0 1;
+}
+
+.value-item:hover {
+    background: $primary-background;
+}
+
+#new-value-label {
+    margin-top: 1;
+    text-style: bold;
+}
+
+#new-value {
+    margin-top: 1;
+    border: tall $accent;
+}
+
+#button-container {
+    layout: horizontal;
+    width: 100%;
+    margin-top: 2;
+    align: right middle;
+}
+
+BulkEditScreen Button {
+    margin: 0 1 0 0;
+    min-width: 10;
+}
+
+/* We handle command mode bindings in Python code instead of CSS
+   as the :contains() pseudo-selector is not supported */

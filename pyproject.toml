@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beetsheet"
+version = "0.1.0"
+description = "A terminal spreadsheet-like app for music file metadata"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+
+dependencies = ["beets>=2.2.0", "textual>=3.0.1", "pathlib>=1.0.1"]
+
+[project.scripts]
+beetsheet = "beetsheet.cli:main"
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.3.5", "ruff>=0.11.3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+filterwarnings = ["ignore::DeprecationWarning"]

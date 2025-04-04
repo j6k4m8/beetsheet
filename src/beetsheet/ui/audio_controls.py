@@ -3,6 +3,7 @@ Audio player control widgets for Beetsheet.
 """
 
 import os
+import re
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Static
@@ -77,11 +78,30 @@ class AudioPlayerControls(Horizontal):
         if track_path and is_playing:
             self.current_track = track_path
             filename = os.path.basename(track_path)
+            # Escape any text that might be interpreted as Rich markup or color codes
+            safe_filename = self._escape_rich_markup(filename)
             status = "Paused: " if is_paused else "Playing: "
-            now_playing.update(f"{status}{filename}")
+            now_playing.update(f"{status}{safe_filename}")
         else:
             self.current_track = ""
             now_playing.update("Not playing")
+
+    def _escape_rich_markup(self, text: str) -> str:
+        """Escape text to prevent Rich markup interpretation.
+
+        Args:
+            text: Text to escape
+
+        Returns:
+            Escaped text safe for display
+        """
+        # Escape brackets which Rich uses for markup
+        escaped = text.replace("[", "\\[").replace("]", "\\]")
+
+        # Handle YouTube IDs in square brackets that could be mistaken for color codes
+        escaped = re.sub(r'(\[[a-zA-Z0-9\-_]{11}\])', lambda m: f"\\{m.group(1)}", escaped)
+
+        return escaped
 
     def show(self) -> None:
         """Show the player controls."""

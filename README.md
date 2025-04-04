@@ -4,6 +4,10 @@ A terminal spreadsheet-like app for music file metadata.
 
 ![Image](https://github.com/user-attachments/assets/e4c0e731-ad85-4664-997f-76a77b8724e4)
 
+
+![image](https://github.com/user-attachments/assets/39bcd3cb-1a88-4461-a0b4-0aa7fd48c5a2)
+
+
 ## Installation
 
 ```bash

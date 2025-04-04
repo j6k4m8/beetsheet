@@ -1,0 +1,92 @@
+/* Styles for the file browser screen */
+
+FileBrowserScreen {
+    background: $surface;
+    align: center middle;
+}
+
+#file-browser-container {
+    width: 90%;
+    height: 80%;
+    border: tall $primary;
+    background: $surface;
+}
+
+#file-browser-title {
+    background: $primary-darken-1;
+    color: $text;
+    text-align: center;
+    padding: 1;
+    text-style: bold;
+    width: 100%;
+}
+
+#file-browser-main {
+    height: 1fr;
+}
+
+#directory-tree {
+    width: 3fr;
+    height: 100%;
+    overflow: auto;
+    border-right: solid $primary-darken-2;
+}
+
+#file-info-panel {
+    width: 2fr;
+    height: 100%;
+    padding: 1;
+}
+
+#selected-file-label {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#selected-file-path {
+    background: $boost;
+    color: $text-muted;
+    height: auto;
+    min-height: 1;
+    margin-bottom: 2;
+    padding: 0 1;
+    border: tall $primary-darken-3;
+    overflow: auto;
+}
+
+#file-browser-buttons {
+    dock: bottom;
+    height: 3;
+    width: 100%;
+    align: right middle;
+    margin-top: 1;
+}
+
+#file-browser-buttons Button {
+    margin: 0 1 0 0;
+    width: 15;
+}
+
+#file-filter-info {
+    dock: bottom;
+    text-align: left;
+    padding: 0 1;
+    background: $surface-darken-1;
+    color: $text-muted;
+}
+
+/* Style for directory tree */
+DirectoryTree {
+    background: $surface;
+    color: $text;
+    border: none;
+}
+
+/* Custom styling for when a file is selected */
+#selected-file-path.--valid {
+    color: $success;
+}
+
+#selected-file-path.--invalid {
+    color: $error;
+}

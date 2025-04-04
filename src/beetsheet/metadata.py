@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 try:
     import mutagen
     from mutagen.easyid3 import EasyID3
+    from mutagen.id3 import ID3
     from mutagen.mp3 import MP3
     from mutagen.flac import FLAC
     HAS_MUTAGEN = True
@@ -63,6 +64,16 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
                         metadata["album"] = audio["album"][0]
                     if "title" in audio:
                         metadata["title"] = audio["title"][0]
+
+                    # Check for album art
+                    try:
+                        id3 = ID3(file_path)
+                        for tag in id3.values():
+                            if tag.FrameID == 'APIC':
+                                metadata["has_album_art"] = True
+                                break
+                    except:
+                        pass
                 except Exception as e:
                     logger.warning(f"Error reading MP3 metadata from {filename}: {str(e)}")
             elif ext == ".flac":
@@ -74,6 +85,10 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
                         metadata["album"] = audio["album"][0]
                     if "title" in audio:
                         metadata["title"] = audio["title"][0]
+
+                    # Check for album art in FLAC
+                    if audio.pictures:
+                        metadata["has_album_art"] = True
                 except Exception as e:
                     logger.warning(f"Error reading FLAC metadata from {filename}: {str(e)}")
         except Exception as e:

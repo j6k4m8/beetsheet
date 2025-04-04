@@ -2,13 +2,13 @@
 Beetsheet app module.
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Set
 import os
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.command import Command
-from textual.widgets import DataTable, Footer, Input
-from textual.containers import Container
+from textual.widgets import DataTable, Footer, Input, Button, Static
+from textual.containers import Container, VerticalScroll, Horizontal
 from textual import events
 from textual.binding import Binding
 from textual.css.query import NoMatches
@@ -18,9 +18,11 @@ from textual.screen import Screen
 from .metadata import extract_metadata
 from .title_guesser import TitleGuesser
 from .ui.custom_palette import CustomCommandPalette
-from .metadata_writer import save_metadata
+from .metadata_writer import save_metadata, save_album_art
 from .ui.widgets import EditField
 from .ui.bulk_edit_screen import BulkEditScreen
+from .album_art import AlbumArtScreen, preview_album_art
+from .file_browser import FileBrowserScreen
 
 class CommandInput(Input):
     """A command input that appears at the bottom of the screen."""
@@ -50,6 +52,8 @@ class BeetsheetApp(App):
     CSS_PATH = [
         Path(__file__).parent / "ui" / "css" / "app.css",
         Path(__file__).parent / "ui" / "css" / "command_palette.css",
+        Path(__file__).parent / "ui" / "css" / "album_art.css",
+        Path(__file__).parent / "ui" / "css" / "file_browser.css",
     ]
 
     CSS = """
@@ -85,6 +89,9 @@ class BeetsheetApp(App):
         Binding(key="escape", action="cancel_edit", description="Cancel Edit"),
         Binding(key="ctrl+a", action="edit_all_artists", description="Edit All Artists"),
         Binding(key="ctrl+l", action="edit_all_albums", description="Edit All Albums"),
+        Binding(key="a", action="add_track_album_art", description="Add Album Art"),
+        Binding(key="A", action="add_bulk_album_art", description="Add Album Art to Selected"),
+        Binding(key="space", action="toggle_select_track", description="Select/Deselect Track"),
     ]
 
     def __init__(self, file_paths: List[str]) -> None:
@@ -97,6 +104,8 @@ class BeetsheetApp(App):
         self.modified_tracks = set()  # Track which files have been modified
         self.editing = False  # Track if we're in edit mode
         self.edit_widget = None
+        self.selected_tracks: Set[int] = set()  # Track indices of selected rows
+        self.current_action = None  # To track callback context for file browser
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -114,19 +123,22 @@ class BeetsheetApp(App):
         table.cursor_type = "row"
 
         # Add columns - add a Status column at the beginning
-        table.add_columns("Status", "File", "Artist", "Album", "Title")
+        table.add_columns("Status", "File", "Artist", "Album", "Title", "Art")
 
         # Extract metadata and add rows
         for path in self.file_paths:
             try:
                 metadata = extract_metadata(path)
                 self.metadata_list.append(metadata)
+                # Add art indicator if album art exists
+                has_art = "✓" if metadata.get("has_album_art", False) else ""
                 table.add_row(
                     "",  # Empty status to start
                     os.path.basename(path),
                     metadata.get("artist", "Unknown"),
                     metadata.get("album", "Unknown"),
-                    metadata.get("title", "Unknown")
+                    metadata.get("title", "Unknown"),
+                    has_art  # Album art indicator
                 )
             except Exception as e:
                 self.notify(f"Error loading {os.path.basename(path)}: {str(e)}")
@@ -218,6 +230,152 @@ class BeetsheetApp(App):
         command_input.value = ""
         command_input.toggle_visibility()
 
+    def action_toggle_select_track(self) -> None:
+        """Toggle selection of the current track."""
+        table = self.query_one(DataTable)
+        if not table.cursor_coordinate:
+            return
+
+        row, _ = table.cursor_coordinate
+
+        if row in self.selected_tracks:
+            self.selected_tracks.remove(row)
+            table.update_cell_at(Coordinate(row, 0), "*" if self.library.tracks[row].path in self.modified_tracks else "")
+            self.notify(f"Deselected track: {os.path.basename(self.library.tracks[row].path)}")
+        else:
+            self.selected_tracks.add(row)
+            table.update_cell_at(Coordinate(row, 0), "➤")
+            self.notify(f"Selected track: {os.path.basename(self.library.tracks[row].path)}")
+
+    async def action_add_track_album_art(self) -> None:
+        """Browse for and add album art to the current track."""
+        table = self.query_one(DataTable)
+        if not table.cursor_coordinate:
+            self.notify("No track selected")
+            return
+
+        row, _ = table.cursor_coordinate
+
+        if row < 0 or row >= len(self.library.tracks):
+            self.notify("Invalid track selection")
+            return
+
+        # Set current action context for the file browser callback
+        self.current_action = {
+            "action": "add_single_album_art",
+            "track_row": row
+        }
+
+        # Open file browser for image selection
+        await self.push_screen(FileBrowserScreen(
+            "Select Album Art Image",
+            [".jpg", ".jpeg", ".png", ".gif", ".bmp"],
+            self._on_image_selected
+        ))
+
+    async def action_add_bulk_album_art(self) -> None:
+        """Browse for and add album art to all selected tracks."""
+        if not self.selected_tracks:
+            self.notify("No tracks selected. Use Space to select tracks.")
+            return
+
+        # Set current action context for the file browser callback
+        self.current_action = {
+            "action": "add_bulk_album_art",
+            "track_rows": list(self.selected_tracks)
+        }
+
+        # Open file browser for image selection
+        await self.push_screen(FileBrowserScreen(
+            "Select Album Art for Multiple Tracks",
+            [".jpg", ".jpeg", ".png", ".gif", ".bmp"],
+            self._on_image_selected
+        ))
+
+    def _on_image_selected(self, image_path: str) -> None:
+        """Handle when an image is selected from the file browser.
+
+        Args:
+            image_path: Path to the selected image file
+        """
+        if not self.current_action or not image_path or not os.path.exists(image_path):
+            return
+
+        action = self.current_action.get("action")
+
+        if action == "add_single_album_art":
+            row = self.current_action.get("track_row")
+            if row is not None and 0 <= row < len(self.library.tracks):
+                track_path = self.library.tracks[row].path
+                self._apply_album_art(track_path, image_path, row)
+
+        elif action == "add_bulk_album_art":
+            rows = self.current_action.get("track_rows", [])
+            success_count = 0
+
+            for row in rows:
+                if row < 0 or row >= len(self.library.tracks):
+                    continue
+
+                track_path = self.library.tracks[row].path
+                if self._apply_album_art(track_path, image_path, row, notify=False):
+                    success_count += 1
+
+            if success_count > 0:
+                self.notify(f"Added album art to {success_count} tracks")
+            else:
+                self.notify("Failed to add album art to any tracks", severity="error")
+
+        # Clear the current action
+        self.current_action = None
+
+    def _apply_album_art(self, track_path: str, image_path: str, row: int, notify: bool = True) -> bool:
+        """Apply album art to a track and update UI.
+
+        Args:
+            track_path: Path to the music file
+            image_path: Path to the image file
+            row: Row index in the table
+            notify: Whether to show notifications
+
+        Returns:
+            bool: True if successful
+        """
+        table = self.query_one(DataTable)
+
+        try:
+            # Save album art to the file
+            if save_album_art(track_path, image_path):
+                if notify:
+                    self.notify(f"Album art added to {os.path.basename(track_path)}")
+                self.modified_tracks.add(track_path)
+                table.update_cell_at(Coordinate(row, 0), "*")
+                table.update_cell_at(Coordinate(row, 5), "✓")
+                return True
+            else:
+                if notify:
+                    self.notify(f"Failed to add album art", severity="error")
+                return False
+        except Exception as e:
+            if notify:
+                self.notify(f"Error: {str(e)}", severity="error")
+            return False
+
+    async def action_preview_album_art(self) -> None:
+        """Preview album art for the current track."""
+        table = self.query_one(DataTable)
+        if not table.cursor_coordinate:
+            return
+
+        row, _ = table.cursor_coordinate
+        if row < 0 or row >= len(self.library.tracks):
+            return
+
+        track_path = self.library.tracks[row].path
+
+        # Show the album art preview screen
+        await self.push_screen(AlbumArtScreen(track_path))
+
     def get_track_for_row(self, row_index_or_key):
         """Get track for a specific row."""
         # Check if we got a dictionary from our tracking system
@@ -279,12 +437,15 @@ class BeetsheetApp(App):
             metadata = self.metadata_list[i]
             # Add status indicator for modified tracks
             status = "*" if track.path in self.modified_tracks else ""
+            # Add art indicator if album art exists
+            has_art = "✓" if metadata.get("has_album_art", False) else ""
             table.add_row(
                 status,
                 os.path.basename(track.path),
                 metadata.get("artist", "Unknown"),
                 metadata.get("album", "Unknown"),
-                track.title
+                track.title,
+                has_art
             )
 
         # Set stored_selection to the app for use after refresh
@@ -368,55 +529,6 @@ class BeetsheetApp(App):
 
         # Schedule this as a fallback
         self.call_later(direct_restore)
-
-    def call_after_refresh(self, callback, *args):
-        """Call a function in the next refresh cycle."""
-        def do_call():
-            callback(*args)
-        self.call_later(do_call)
-
-    def restore_selection(self, table, stored_selection):
-        """Restore the table selection after a refresh."""
-        if not stored_selection:
-            return
-
-        target_row = None
-
-        # If we have a row index, use it directly
-        if 'row_index' in stored_selection and stored_selection['row_index'] is not None:
-            target_row = stored_selection['row_index']
-        # Otherwise try to find the row key in the new table
-        elif 'row_key' in stored_selection:
-            row_key = stored_selection['row_key']
-            for i, current_row_key in enumerate(table.rows):
-                # Try direct comparison
-                if current_row_key == row_key:
-                    target_row = i
-                    break
-                # Try string comparison as fallback
-                if str(current_row_key) == str(row_key):
-                    target_row = i
-                    break
-
-        if target_row is not None:
-            try:
-                # Make sure target_row is an integer and in valid range
-                target_row = int(target_row)
-                if 0 <= target_row < table.row_count:
-                    # Focus the table and set cursor
-                    table.focus()
-                    table.cursor_coordinate = (target_row, 3)  # Focus on title column
-                    # Update our tracking
-                    self.selected_cell = {
-                        'row_key': table.rows[target_row],
-                        'row_index': target_row,
-                        'column': 3
-                    }
-                    self.notify(f"Selection restored to row {target_row}")
-                else:
-                    self.notify(f"Row {target_row} out of range")
-            except (TypeError, ValueError) as e:
-                self.notify(f"Failed to restore selection: {str(e)}")
 
     async def guess_title_from_filename(self):
         """Guess title for the currently selected cell."""
@@ -597,7 +709,7 @@ class BeetsheetApp(App):
 
             # Basic calculation for column widths - adjust as needed for your style
             # These are approximations - you may need to tune these values
-            column_widths = [5, 25, 25, 25, 25]  # Status column is 5 wide, others 25% each
+            column_widths = [5, 25, 25, 25, 25, 10]  # Status column is 5 wide, others 25% each, Art column is 10 wide
 
             # Calculate total width to use for percentage calculations
             total_width = table_region.width - 2  # Subtract borders
@@ -610,16 +722,20 @@ class BeetsheetApp(App):
             for i in range(column):
                 if i == 0:  # Status column (fixed width)
                     x += column_widths[0]
+                elif i == 5:  # Art column (fixed width)
+                    x += column_widths[5]
                 else:
                     # Other columns use percentage width
-                    x += int((total_width - column_widths[0]) * 0.25)
+                    x += int((total_width - column_widths[0] - column_widths[5]) * 0.25)
 
             # Get width of current column
             if column == 0:
                 width = column_widths[0]  # Status column
+            elif column == 5:
+                width = column_widths[5]  # Art column
             else:
                 # Other columns
-                width = int((total_width - column_widths[0]) * 0.25) - 1  # Subtract 1 for padding
+                width = int((total_width - column_widths[0] - column_widths[5]) * 0.25) - 1  # Subtract 1 for padding
 
             height = 1  # Cells are typically 1 unit high
 
@@ -731,6 +847,27 @@ class BeetsheetApp(App):
             title="Edit All Albums",
             description="Edit album name for all tracks at once",
             handler=self.action_edit_all_albums,
+        )
+
+        yield Command(
+            command_id="add_album_art",
+            title="Add Album Art",
+            description="Add album art to the current track",
+            handler=self.action_add_track_album_art,
+        )
+
+        yield Command(
+            command_id="add_bulk_album_art",
+            title="Add Album Art to Selected",
+            description="Add album art to all selected tracks",
+            handler=self.action_add_bulk_album_art,
+        )
+
+        yield Command(
+            command_id="preview_album_art",
+            title="Preview Album Art",
+            description="Preview the album art for the current track",
+            handler=self.action_preview_album_art,
         )
 
     async def action_edit_all_artists(self) -> None:

@@ -29,11 +29,20 @@ uv run beetsheet /path/to/music/file1.mp3 /path/to/music/file2.flac
 ## Controls
 
 -   `q`: Quit the application
+-   `a`: Add/change album art for current track
+-   `A`: Add/change album art for all selected tracks
+-   `Space`: Select/deselect current track
+-   `s`: Save changes to files
 
 ## Features
 
 -   Display music files in a spreadsheet format showing Artist, Album, and Title
 -   Navigate through your music files in a simple interface
+-   Album art management:
+    -   Browse for and add cover art to individual tracks
+    -   Batch add the same cover art to multiple selected tracks
+    -   Preview album art in the terminal interface
+    -   Supports common image formats (JPG, PNG)
 
 ## Development
 
@@ -46,3 +55,19 @@ Run the tests:
 ```bash
 uv run pytest
 ```
+
+## Album Art Management
+
+### Adding album art to a single track
+
+1. Navigate to the desired track
+2. Press `a` to open a file browser
+3. Select an image file to use as album art
+4. The selected image will be embedded as the track's cover art
+
+### Adding album art to multiple tracks
+
+1. Select tracks by navigating to each one and pressing `Space`
+2. Press `A` to open a file browser
+3. Select an image file to use as album art
+4. The selected image will be embedded as cover art for all selected tracks

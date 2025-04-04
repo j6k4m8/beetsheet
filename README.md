@@ -33,6 +33,8 @@ uv run beetsheet /path/to/music/file1.mp3 /path/to/music/file2.flac
 -   `A`: Add/change album art for all selected tracks
 -   `Space`: Select/deselect current track
 -   `s`: Save changes to files
+-   `p`: Play/pause the currently selected audio track
+-   `P`: Stop audio playback
 
 ## Features
 
@@ -43,6 +45,10 @@ uv run beetsheet /path/to/music/file1.mp3 /path/to/music/file2.flac
     -   Batch add the same cover art to multiple selected tracks
     -   Preview album art in the terminal interface
     -   Supports common image formats (JPG, PNG)
+-   Audio playback:
+    -   Play and preview audio tracks directly in the terminal
+    -   Pause/resume and stop controls
+    -   Shows currently playing track information
 
 ## Development
 
@@ -71,3 +77,18 @@ uv run pytest
 2. Press `A` to open a file browser
 3. Select an image file to use as album art
 4. The selected image will be embedded as cover art for all selected tracks
+
+## Audio Playback
+
+To enable audio playback, you'll need to have pygame installed:
+
+```bash
+pip install pygame
+```
+
+Once installed:
+
+1. Select a track with the cursor
+2. Press `p` to play/pause the selected track
+3. Press `P` (shift+p) to stop playback
+4. Use the playback controls in the bottom panel to control audio

@@ -15,6 +15,7 @@ dependencies = [
     "textual>=3.0.1",
     "pathlib>=1.0.1",
     "pillow>=9.0.0",
+    "pygame>=2.5.0",  # For audio playback
 ]
 
 [project.scripts]

@@ -1,0 +1,49 @@
+/* Styles for the audio player components */
+
+#audio-player-container {
+    dock: bottom;
+    height: 3;
+    background: $panel;
+    border-top: solid $primary;
+    padding: 0 1;
+    width: 100%;
+}
+
+#player-controls {
+    align: center middle;
+    width: auto;
+}
+
+#play-button,
+#stop-button {
+    width: 8;
+    min-width: 8;
+    margin: 0 1;
+}
+
+#now-playing {
+    width: 1fr;
+    content-align: left middle;
+    height: 1;
+    margin: 0 2;
+    color: $text-muted;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+#now-playing.--playing {
+    color: $success;
+}
+
+#now-playing.--paused {
+    color: $warning;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Make sure the player doesn't overlap with table content */
+DataTable {
+    margin-bottom: 3;
+}

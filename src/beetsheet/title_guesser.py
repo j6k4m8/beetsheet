@@ -35,6 +35,37 @@ class TitleGuesser:
         return title
 
     @staticmethod
+    def guess_track_number_from_filename(filepath: str) -> Optional[int]:
+        """Extract a track number from a filename."""
+        # Get just the filename without path and extension
+        filename = Path(filepath).stem
+
+        # Look for common track number patterns at the start of the filename
+        # Pattern 1: "01 - Track Name.mp3"
+        # Pattern 2: "1. Track Name.mp3"
+        # Pattern 3: "1_Track Name.mp3"
+        track_num_match = re.match(r'^(\d+)[\s\.\-_]+', filename)
+
+        if track_num_match:
+            try:
+                track_number = int(track_num_match.group(1))
+                return track_number
+            except ValueError:
+                pass
+
+        # Try to find track numbers in brackets or parentheses
+        # Pattern: "Track Name (1).mp3" or "Track Name [01].mp3"
+        bracket_match = re.search(r'[\(\[]\s*(\d+)\s*[\)\]]', filename)
+        if bracket_match:
+            try:
+                track_number = int(bracket_match.group(1))
+                return track_number
+            except ValueError:
+                pass
+
+        return None
+
+    @staticmethod
     def clean_youtube_id(title: str) -> str:
         """
         Remove YouTube IDs from a string.

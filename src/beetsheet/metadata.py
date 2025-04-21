@@ -29,9 +29,9 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
         file_path: Path to the music file
 
     Returns:
-        Dictionary containing artist, album, and title
+        Dictionary containing artist, album, title, and track number
     """
-    metadata = {"artist": "Unknown", "album": "Unknown", "title": "Unknown"}
+    metadata = {"artist": "Unknown", "album": "Unknown", "title": "Unknown", "track_number": ""}
 
     if not os.path.exists(file_path):
         logger.error(f"File does not exist: {file_path}")
@@ -64,6 +64,10 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
                         metadata["album"] = audio["album"][0]
                     if "title" in audio:
                         metadata["title"] = audio["title"][0]
+                    if "tracknumber" in audio:
+                        # Extract just the number from potential "1/12" format
+                        track_num = audio["tracknumber"][0].split("/")[0].strip()
+                        metadata["track_number"] = track_num
 
                     # Check for album art
                     try:
@@ -85,6 +89,10 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
                         metadata["album"] = audio["album"][0]
                     if "title" in audio:
                         metadata["title"] = audio["title"][0]
+                    if "tracknumber" in audio:
+                        # Extract just the number from potential "1/12" format
+                        track_num = audio["tracknumber"][0].split("/")[0].strip()
+                        metadata["track_number"] = track_num
 
                     # Check for album art in FLAC
                     if audio.pictures:
@@ -93,6 +101,13 @@ def extract_metadata(file_path: str) -> Dict[str, str]:
                     logger.warning(f"Error reading FLAC metadata from {filename}: {str(e)}")
         except Exception as e:
             logger.warning(f"General error processing metadata for {filename}: {str(e)}")
+
+    # If we didn't get a track number from the metadata, try to guess it from the filename
+    if not metadata["track_number"]:
+        from .title_guesser import TitleGuesser
+        guessed_track = TitleGuesser.guess_track_number_from_filename(file_path)
+        if guessed_track is not None:
+            metadata["track_number"] = str(guessed_track)
 
     # Add the file path to metadata
     metadata["file_path"] = file_path

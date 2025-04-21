@@ -30,7 +30,7 @@ def save_metadata(file_path: str, metadata: Dict[str, Any]) -> bool:
 
     Args:
         file_path: Path to the music file
-        metadata: Dictionary containing metadata to update
+        metadata: Dictionary containing metadata to update (title, artist, album, track_number)
 
     Returns:
         bool: True if save was successful, False otherwise
@@ -76,6 +76,8 @@ def _save_mp3_metadata(file_path: str, metadata: Dict[str, Any]) -> bool:
             audio['artist'] = metadata['artist']
         if 'album' in metadata:
             audio['album'] = metadata['album']
+        if 'track_number' in metadata and metadata['track_number']:
+            audio['tracknumber'] = metadata['track_number']
 
         audio.save()
         return True
@@ -92,6 +94,9 @@ def _save_mp3_metadata(file_path: str, metadata: Dict[str, Any]) -> bool:
                 audio.add(TPE1(encoding=3, text=metadata['artist']))
             if 'album' in metadata:
                 audio.add(TALB(encoding=3, text=metadata['album']))
+            if 'track_number' in metadata and metadata['track_number']:
+                from mutagen.id3 import TRCK
+                audio.add(TRCK(encoding=3, text=metadata['track_number']))
             audio.save()
             return True
         except Exception as e2:
